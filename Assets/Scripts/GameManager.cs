@@ -11,12 +11,17 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        instance = this;
+        if (instance == null)
+        {
+            instance = this;
+        } else  {
+            Destroy(gameObject);
+        }
     }
 
     public void AddScore()
     {
         score++;
-        scoreText.text = "Score: " + score;
+        scoreText.text = "Score: "+ score;
     }
 }
