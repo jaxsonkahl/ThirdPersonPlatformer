@@ -10,6 +10,8 @@ public class PlayerController : MonoBehaviour
     [Header("Jump Settings")]
     public float jumpForce = 7f;
     private bool isGrounded;
+    private int jumpCount = 0;
+    private int maxJumps = 2; // Allows double jump
 
     [Header("References")]
     public Transform cam;
@@ -63,10 +65,11 @@ public class PlayerController : MonoBehaviour
 
     void HandleJumping()
     {
-        if (isGrounded && Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Jump") && jumpCount < maxJumps)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
-            isGrounded = false; // Prevents double jumps
+            jumpCount++;
+            isGrounded = false; // Ensures mid-air jumps are counted correctly
         }
     }
 
@@ -76,6 +79,7 @@ public class PlayerController : MonoBehaviour
         if (collision.gameObject.CompareTag("Ground"))
         {
             isGrounded = true;
+            jumpCount = 0; // Reset jumps when touching ground
         }
     }
 }
