@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -11,7 +12,14 @@ public class PlayerController : MonoBehaviour
     public float jumpForce = 7f;
     private bool isGrounded;
     private int jumpCount = 0;
-    private int maxJumps = 2; // Allows double jump
+    private int maxJumps = 2;
+
+    [Header("Dash Settings")]
+    public float dashForce = 20f;
+    public float dashDuration = 0.2f;
+    public float dashCooldown = 1f;
+    private bool canDash = true;
+    private bool isDashing = false;
 
     [Header("References")]
     public Transform cam;
@@ -22,17 +30,25 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true; // Prevents unwanted rotations
+        rb.freezeRotation = true;
     }
 
     void Update()
     {
         HandleJumping();
+
+        if (Input.GetKeyDown(KeyCode.LeftShift) && canDash)
+        {
+            StartCoroutine(Dash());
+        }
     }
 
     void FixedUpdate()
     {
-        HandleMovement();
+        if (!isDashing) // Prevent movement while dashing
+        {
+            HandleMovement();
+        }
     }
 
     void HandleMovement()
@@ -44,14 +60,10 @@ public class PlayerController : MonoBehaviour
 
         if (direction.magnitude >= 0.1f)
         {
-            // Calculate the target angle based on camera direction
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
-            
-            // Smoothly interpolate towards the target rotation
             float smoothAngle = Mathf.LerpAngle(transform.eulerAngles.y, targetAngle, Time.deltaTime * rotationSpeed);
             transform.rotation = Quaternion.Euler(0, smoothAngle, 0);
-            
-            // Calculate movement direction relative to the camera
+
             moveDirection = Quaternion.Euler(0, targetAngle, 0) * Vector3.forward;
         }
         else
@@ -59,7 +71,6 @@ public class PlayerController : MonoBehaviour
             moveDirection = Vector3.zero;
         }
 
-        // Preserve Y velocity so jumping is not overridden
         rb.linearVelocity = new Vector3(moveDirection.x * moveSpeed, rb.linearVelocity.y, moveDirection.z * moveSpeed);
     }
 
@@ -69,17 +80,38 @@ public class PlayerController : MonoBehaviour
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
             jumpCount++;
-            isGrounded = false; // Ensures mid-air jumps are counted correctly
+            isGrounded = false;
         }
     }
 
-    // Detect when player lands on the ground
+    IEnumerator Dash()
+    {
+        canDash = false;
+        isDashing = true;
+
+        // Apply a force in the movement direction
+        Vector3 dashDirection = moveDirection.normalized;
+        if (dashDirection == Vector3.zero)
+        {
+            dashDirection = transform.forward; // Dash forward if no input is given
+        }
+
+        rb.AddForce(dashDirection * dashForce, ForceMode.VelocityChange);
+
+        yield return new WaitForSeconds(dashDuration);
+
+        isDashing = false;
+
+        yield return new WaitForSeconds(dashCooldown);
+        canDash = true;
+    }
+
     void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Ground"))
         {
             isGrounded = true;
-            jumpCount = 0; // Reset jumps when touching ground
+            jumpCount = 0;
         }
     }
 }
